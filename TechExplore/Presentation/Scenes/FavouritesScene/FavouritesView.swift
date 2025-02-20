@@ -9,7 +9,16 @@ import SwiftUI
 
 struct FavouritesView: View {
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack {
+            SUIAuthHeaderView(title: "Favourites")
+            ScrollView {
+                ForEach(1...5, id: \.self) { num in
+                    StatementCellView()
+                        .padding(.horizontal)
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
     }
 }
 
@@ -63,5 +72,5 @@ struct StatementCellView: View {
 }
 
 #Preview {
-    StatementCellView()
+    FavouritesView()
 }
