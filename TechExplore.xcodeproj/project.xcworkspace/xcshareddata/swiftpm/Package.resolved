@@ -1,0 +1,15 @@
+{
+  "originHash" : "e174d7fbd0f5d2be5bfd25816befabe94a9def9e5c818175bb644a70b4ecb6a6",
+  "pins" : [
+    {
+      "identity" : "networkmanager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Tsotne94/NetworkManager.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "628fe9e5fc77fabac661cdf3f37eeaebb12acd6d"
+      }
+    }
+  ],
+  "version" : 3
+}
