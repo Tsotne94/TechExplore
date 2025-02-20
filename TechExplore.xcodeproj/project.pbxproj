@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1F59C45B2D67BAC4003C0842 /* MyNetworkManager in Frameworks */ = {isa = PBXBuildFile; productRef = 1F59C45A2D67BAC4003C0842 /* MyNetworkManager */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		1F59BF132D67A933003C0842 /* TechExplore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TechExplore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1F59C45B2D67BAC4003C0842 /* MyNetworkManager in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = TechExplore;
 			packageProductDependencies = (
+				1F59C45A2D67BAC4003C0842 /* MyNetworkManager */,
 			);
 			productName = TechExplore;
 			productReference = 1F59BF132D67A933003C0842 /* TechExplore.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 1F59BF0A2D67A933003C0842;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1F59C4592D67BAC4003C0842 /* XCRemoteSwiftPackageReference "NetworkManager" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1F59BF142D67A933003C0842 /* Products */;
 			projectDirPath = "";
@@ -333,6 +342,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1F59C4592D67BAC4003C0842 /* XCRemoteSwiftPackageReference "NetworkManager" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Tsotne94/NetworkManager.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1F59C45A2D67BAC4003C0842 /* MyNetworkManager */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1F59C4592D67BAC4003C0842 /* XCRemoteSwiftPackageReference "NetworkManager" */;
+			productName = MyNetworkManager;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1F59BF0B2D67A933003C0842 /* Project object */;
 }
