@@ -24,9 +24,7 @@ public struct DefaultAppStateRepository: AppStateRepository {
                 promise(.success(savedState))
                 return
             }
-            
-//            let state: AppState = (Auth.auth().currentUser != nil) ? .mainFlow : .authentication
-//            promise(.success(state))
+
         }
         .eraseToAnyPublisher()
     }

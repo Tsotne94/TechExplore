@@ -22,6 +22,6 @@ final class DefaultOnboardingCoordinator: OnboardingCoordinator {
     }
     
     func start() {
-
+        rootViewController = ViewController()
     }
 }
