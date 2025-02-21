@@ -24,8 +24,8 @@ final class DefaultFavouritesTabCoordinator: NSObject, FavouritesTabCoordinator 
     }
     
     func start() {
-//        let hostingView = UIHostingController(rootView: FavoritesView())
-//        rootViewController.setViewControllers([hostingView], animated: false)
+        let hostingView = UIHostingController(rootView: FavouritesView())
+        rootViewController.setViewControllers([hostingView], animated: false)
     }
     
     func goToProductsDetails(productId: Int) {
