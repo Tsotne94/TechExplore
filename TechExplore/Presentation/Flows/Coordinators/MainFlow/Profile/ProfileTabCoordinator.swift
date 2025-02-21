@@ -29,8 +29,7 @@ final class DefaultProfileTabCoordinator: NSObject, ProfileTabCoordinator {
     }
     
     func goToSettings() {
-//        let viewController = SettingsViewController()
-//        rootViewController.pushViewController(viewController, animated: true)
+        //to be added
     }
     
     func goBack() {

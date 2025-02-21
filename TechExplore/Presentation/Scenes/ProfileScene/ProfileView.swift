@@ -48,9 +48,9 @@ struct ProfileView: View {
     private var headerSection: some View {
         ZStack(alignment: .top) {
             customGreen
-                .frame(height: 200)
+                .frame(height: 180)
                 .clipShape(
-                    RoundedRectangle(cornerRadius: 40, style: .continuous)
+                    UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20)
                 )
                 .edgesIgnoringSafeArea(.top)
                 .shadow(color: shadowColor, radius: 8, y: 4)
@@ -141,7 +141,6 @@ struct ProfileView: View {
         )
     }
     
-    // MARK: - Logout Section
     private var logoutSection: some View {
         VStack(spacing: 20) {
             Button(action: { showingAlert = true }) {
