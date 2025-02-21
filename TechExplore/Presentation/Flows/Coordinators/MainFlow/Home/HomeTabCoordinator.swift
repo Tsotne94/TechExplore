@@ -29,10 +29,8 @@ final class DefaultHomeTabCoordinator: NSObject, HomeTabCoordinator {
     }
     
     func goToProductsDetails(productId: Int) {
-//        let viewController = ProductDetailsViewController(id: productId) { [weak self] in
-//            self?.goBack()
-//        }
-//        rootViewController.pushViewController(viewController, animated: true)
+        let viewController = UIHostingController(rootView: StatementDetailsView())
+        rootViewController.pushViewController(viewController, animated: true)
     }
     
     func goBack() {

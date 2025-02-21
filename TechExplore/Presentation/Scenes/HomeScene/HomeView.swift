@@ -17,8 +17,7 @@ struct HomeView: View {
 }
 
 struct Home: View {
-    @State private var searchText = ""
-    @State private var activeTag: Tag = .first
+    @StateObject private var viewModel = HomeViewModel()
     @FocusState private var isSearching: Bool
     @Namespace private var animation
     
@@ -31,18 +30,21 @@ struct Home: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 navigationBar()
             }
-            .animation(.snappy(duration: 0.3, extraBounce: 0), value: isSearching)
+            .animation(.snappy(duration: 0.3, extraBounce: 0), value: viewModel.isSearching)
         }
         .scrollTargetBehavior(CustomScrollTargetBehaviour())
         .contentMargins(.top, 190, for: .scrollIndicators)
         .background(.customGreen.opacity(0.05))
+        .onChange(of: isSearching) { _, newValue in
+            viewModel.toggleSearch(newValue)
+        }
     }
     
     @ViewBuilder
     private func navigationBar(_ title: String = "Home Page") -> some View {
         GeometryReader { proxy in
             let minY = proxy.frame(in: .scrollView(axis: .vertical)).minY
-            let progress = isSearching ? 1 : max(min((-minY / 70), 1), 0)
+            let progress = viewModel.isSearching ? 1 : max(min((-minY / 70), 1), 0)
             
             VStack(spacing: 10) {
                 titleView(title)
@@ -51,12 +53,12 @@ struct Home: View {
             }
             .padding(.top, 25)
             .safeAreaPadding(.horizontal, 15)
-            .offset(y: minY < 0 || isSearching ? -minY : 0)
+            .offset(y: minY < 0 || viewModel.isSearching ? -minY : 0)
             .offset(y: -progress * 65)
         }
         .frame(height: 190)
         .padding(.bottom, 10)
-        .padding(.bottom, isSearching ? -65 : 0)
+        .padding(.bottom, viewModel.isSearching ? -65 : 0)
     }
     
     @ViewBuilder
@@ -74,10 +76,10 @@ struct Home: View {
             Image(systemName: "magnifyingglass")
                 .font(.title3)
             
-            TextField("Search Program", text: $searchText)
+            TextField("Search Program", text: $viewModel.searchText)
                 .focused($isSearching)
             
-            if isSearching {
+            if viewModel.isSearching {
                 Button {
                     isSearching = false
                 } label: {
@@ -109,16 +111,16 @@ struct Home: View {
                 ForEach(Tag.allCases, id: \.rawValue) { tag in
                     Button {
                         withAnimation(.snappy) {
-                            activeTag = tag
+                            viewModel.updateActiveTag(tag)
                         }
                     } label: {
                         Text(tag.rawValue)
                             .font(.callout)
-                            .foregroundStyle(activeTag == tag ? Color.white : Color.black)
+                            .foregroundStyle(viewModel.activeTag == tag ? Color.white : Color.black)
                             .padding(.vertical, 8)
                             .padding(.horizontal, 15)
                             .background {
-                                if activeTag == tag {
+                                if viewModel.activeTag == tag {
                                     Capsule()
                                         .fill(.customGreen)
                                         .matchedGeometryEffect(id: "ACTIVETAB", in: animation)
@@ -137,20 +139,27 @@ struct Home: View {
     
     @ViewBuilder
     private func messagesList() -> some View {
-        ForEach(0...20, id: \.self) { _ in
-            HStack(spacing: 12) {
-                Circle()
-                    .frame(width: 55, height: 55)
-                VStack(alignment: .leading, spacing: 6) {
-                    Rectangle()
-                        .frame(width: 140, height: 8)
-                    Rectangle()
-                        .frame(height: 8)
-                    Rectangle()
-                        .frame(width: 88, height: 8)
+        ForEach(viewModel.messages) { message in
+            Button {
+                viewModel.goToDetails(message: message)
+            } label: {
+                HStack(spacing: 12) {
+                    Circle()
+                        .frame(width: 55, height: 55)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(message.title)
+                            .font(.headline)
+                        Text(message.content)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        Text(message.timestamp, style: .date)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(.gray.opacity(0.5))
+            .buttonStyle(.plain)
             .padding(.horizontal, 15)
         }
     }
