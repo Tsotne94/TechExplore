@@ -10,7 +10,6 @@ public extension DependencyContainer {
         DependencyContainer.root.register {
             Module { DefaultLoadAppStateUseCase() as LoadAppStateUseCase }
             Module { DefaultUpdateAppStateUseCase() as UpdateAppStateUseCase }
-            Module { DefaultHasSeenOnboardingUseCase() as HasSeenOnboardingUseCase }
             Module { DefaultSignInUseCase() as SignInUseCase }
             Module { DefaultSignUpUseCase() as SignUpUseCase }
             Module { DefaultSignOutUseCase() as SignOutUseCase }

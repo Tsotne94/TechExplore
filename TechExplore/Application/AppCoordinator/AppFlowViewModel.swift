@@ -11,7 +11,6 @@ import Combine
 public protocol AppFlowViewModel: AppFlowViewModelInput, AppFlowViewModelOutput {}
 
 public protocol AppFlowViewModelInput: AnyObject {
-    func startOnboarding()
     func startAuthentication()
     func startMainFlow()
     func loadAppState()
@@ -23,7 +22,6 @@ public protocol AppFlowViewModelOutput {
 }
 
 public enum AppFlowViewModelOutputAction {
-    case startOnboarding
     case startAuthentication
     case startMainFlow
 }
@@ -31,7 +29,6 @@ public enum AppFlowViewModelOutputAction {
 public final class DefaultAppFlowViewModel: AppFlowViewModel {
     @Inject var loadAppStateUseCase: LoadAppStateUseCase
     @Inject var updateAppStateUseCase: UpdateAppStateUseCase
-    @Inject var hasSeenOnboardingUseCase: HasSeenOnboardingUseCase
     @Inject var signOutUseCase: SignOutUseCase
     
     private let _output = PassthroughSubject<AppFlowViewModelOutputAction, Never>()
@@ -45,12 +42,7 @@ public final class DefaultAppFlowViewModel: AppFlowViewModel {
         loadAppState()
     }
     
-    public func startOnboarding() {
-        _output.send(.startOnboarding)
-    }
-    
     public func startAuthentication() {
-        hasSeenOnboardingUseCase.execute()
         updateAppStateUseCase.execute(state: .authentication)
         _output.send(.startAuthentication)
     }
@@ -73,8 +65,6 @@ public final class DefaultAppFlowViewModel: AppFlowViewModel {
         loadAppStateUseCase.execute()
             .sink(receiveValue: { [weak self] appState in
                 switch appState {
-                case .onboarding:
-                    self?.startOnboarding()
                 case .authentication:
                     self?.startAuthentication()
                 case .mainFlow:

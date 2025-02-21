@@ -14,17 +14,12 @@ public struct DefaultAppStateRepository: AppStateRepository {
     
     public func loadAppState() -> AnyPublisher<AppState, Never> {
         Future<AppState, Never> { promise in
-            if !UserDefaults.standard.bool(forKey: "hasSeenOnboarding") {
-                promise(.success(.onboarding))
-                return
-            }
-            
             if let savedStateRaw = UserDefaults.standard.string(forKey: "appState"),
                let savedState = AppState(rawValue: savedStateRaw) {
                 promise(.success(savedState))
                 return
             }
-
+            
         }
         .eraseToAnyPublisher()
     }

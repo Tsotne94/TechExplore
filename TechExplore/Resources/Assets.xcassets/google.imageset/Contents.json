@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Google.png",
+      "filename" : "Platform=Google, Color=Original.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Google@2x.png",
+      "filename" : "Platform=Google, Color=Original@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Google@3x.png",
+      "filename" : "Platform=Google, Color=Original@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

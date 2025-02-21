@@ -8,10 +8,50 @@
 import SwiftUI
 
 struct CompanyDetailsView: View {
+    let griditems = GridItem(.flexible(), spacing: 20)
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        VStack {
+            header()
+            ScrollView {
+            Image(systemName: "person.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 150, maxHeight: 150)
+            Text("Company name")
+                .font(.system(size: 25, weight: .black))
+                .padding(.bottom)
+            
+            Text("small description about company, whatewer is needed i dont know")
+                .padding(.horizontal, 50)
+            
+                LazyVGrid(columns: Array(repeating: griditems, count: 3)) {
+                    ForEach(1...5, id: \.self) { num in
+                        StatementCellView()
+                            .frame(maxHeight: 100)
+                    }
+                }.padding()
+            }
+        }
     }
-#warning("vgrid and info")
+    
+    private func header() -> some View {
+        ZStack {
+            HStack {
+                Button {
+                    print("back tapped")
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 30, maxHeight: 30)
+                        .foregroundStyle(.black)
+                }
+                .padding(.horizontal)
+                Spacer()
+            }
+        }
+    }
 }
 
 #Preview {
