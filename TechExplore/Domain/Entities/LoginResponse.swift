@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct LoginResponse: Codable {
+public struct LoginResponse: Codable {
     let access: String
     let refresh: String
     let userId: Int

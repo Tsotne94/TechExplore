@@ -28,12 +28,13 @@ final class DefaultAuthenticationCoordinator: NSObject, AuthenticationCoordinato
     }
     
     func start() {
-//        let hostingView = UIHostingController(rootView: LoginView())
-//        rootViewController.setViewControllers([hostingView], animated: false)
+        let hostingView = UIHostingController(rootView: LoginView())
+        rootViewController.setViewControllers([hostingView], animated: false)
     }
     
     func goToSignUp(animated: Bool) {
-
+        let hostingView = UIHostingController(rootView: SignUpView())
+        rootViewController.pushViewController(hostingView, animated: true)
     }
     
     func goBack(animated: Bool) {

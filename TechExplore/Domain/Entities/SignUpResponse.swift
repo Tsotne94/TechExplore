@@ -7,6 +7,6 @@
 
 import Foundation
 
-struct SignUpResponse: Codable {
+public struct SignUpResponse: Codable {
     let message: String
 }

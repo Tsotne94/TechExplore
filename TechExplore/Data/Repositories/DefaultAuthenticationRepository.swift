@@ -7,21 +7,46 @@
 
 import Foundation
 import Combine
+import MyNetworkManager
 
 public struct DefaultAuthenticationRepository: AuthenticationRepository {
-    
     public init() { }
     
-    public func signIn(email: String, password: String) -> AnyPublisher<User, Error> {
-        return Future<User, Error> { promise in
-            promise(.success(User()))
-        }
-        .eraseToAnyPublisher()
+    public func signUp(signupRequest: SignUpRequest) -> AnyPublisher<SignUpResponse, any Error> {
+        Future { promise in
+            RequestMaker.shared.request(
+                urlString: APIEndpointsEnum.signUp,
+                modelType: SignUpResponse.self,
+                networkManager: NetworkManager(),
+                bearer: nil,
+                body: signupRequest,
+                methodType: .post) { result in
+                    switch result {
+                    case .success(let success):
+                        promise(.success(success))
+                    case .failure(let failure):
+                        promise(.failure(failure))
+                    }
+                }
+        }.eraseToAnyPublisher()
     }
     
-    public func signUp(email: String, password: String) -> AnyPublisher<User, Error> {
-        Future<User, Error> { promise in
-            promise(.success(User()))
+    public func signIn(loginRequest: LoginRequest) -> AnyPublisher<LoginResponse, any Error> {
+        Future { promise in
+            RequestMaker.shared.request(
+                urlString: APIEndpointsEnum.login,
+                modelType: LoginResponse.self,
+                networkManager: NetworkManager(),
+                bearer: nil,
+                body: loginRequest,
+                methodType: .post) { result in
+                    switch result {
+                    case .success(let success):
+                        promise(.success(success))
+                    case .failure(let failure):
+                        promise(.failure(failure))
+                    }
+                }
         }
         .eraseToAnyPublisher()
     }

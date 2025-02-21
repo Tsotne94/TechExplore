@@ -9,12 +9,28 @@ import Combine
 import Foundation
 
 public struct DefaultAppStateRepository: AppStateRepository {
+    @Inject private var keychainGetDataUseCase: KeyChainRetriveDataUseCase
     
     public init() { }
     
     public func loadAppState() -> AnyPublisher<AppState, Never> {
         Future<AppState, Never> { promise in
-            promise(.success(.mainFlow))
+            let _: AnyCancellable = keychainGetDataUseCase.execute(key: "isLoggedIn")
+                .sink { completion in
+                    switch completion {
+                    case .finished:
+                        break
+                    case .failure:
+                        promise(.success(.authentication))
+                    }
+                } receiveValue: { data in
+                    if let stateString = String(data: data, encoding: .utf8),
+                       let state = AppState(rawValue: stateString) {
+                        promise(.success(state))
+                    } else {
+                        promise(.success(.authentication))
+                    }
+                }
         }
         .eraseToAnyPublisher()
     }

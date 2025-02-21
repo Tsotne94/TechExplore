@@ -10,6 +10,7 @@ import Foundation
 public enum InputField: Hashable, Equatable {
     case name
     case email
+    case phoneNumber
     case password
     case confirmPassword
     
@@ -19,6 +20,7 @@ public enum InputField: Hashable, Equatable {
         case .password: return 95
         case .name: return 100
         case .confirmPassword: return 160
+        case .phoneNumber: return 130
         }
     }
 }

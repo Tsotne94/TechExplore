@@ -8,7 +8,7 @@
 import Combine
 
 public protocol SignInUseCase {
-    func execute(email: String, password: String) -> AnyPublisher<User, Error>
+    func execute(email: String, password: String) -> AnyPublisher<LoginResponse, Error>
 }
 
 public struct DefaultSignInUseCase: SignInUseCase {
@@ -16,7 +16,7 @@ public struct DefaultSignInUseCase: SignInUseCase {
     
     public init() { }
     
-    public func execute(email: String, password: String) -> AnyPublisher<User, Error> {
-        authenticationRepository.signIn(email: email, password: password)
+    public func execute(email: String, password: String) -> AnyPublisher<LoginResponse, Error> {
+        authenticationRepository.signIn(loginRequest: LoginRequest(email: email, password: password))
     }
 }

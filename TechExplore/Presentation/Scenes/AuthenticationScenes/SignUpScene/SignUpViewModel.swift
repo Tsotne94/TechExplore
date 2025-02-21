@@ -5,8 +5,6 @@
 //  Created by Cotne Chubinidze on 21.02.25.
 //
 
-
-
 import Combine
 import Foundation
 
@@ -42,14 +40,17 @@ enum SignUpViewModelOutputAction {
     case signUpError
 }
 
+import Foundation
+import Combine
+
 final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
     @Inject private var authenticationCoordinator: AuthenticationCoordinator
-//    @Inject private var getCurrentUserUseCase: GetCurrentUserUseCase
     @Inject private var signUpUseCase: SignUpUseCase
-//    @Inject private var saveUserUseCase: SaveUserUseCase
     
     @Published var name: String = ""
     @Published var email: String = ""
+    @Published var phoneNumber: String = ""
+    @Published var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
     @Published var password: String = ""
     @Published var passwordIsHidden: Bool = true
     @Published var isLoading: Bool = false
@@ -95,18 +96,26 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
             return
         }
         
-        signUpUseCase.execute(email: email, password: password)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: dateOfBirth)
+        
+        let user = SignUpRequest(
+            email: email,
+            password: password,
+            confirmPassword: confirmPasswod,
+            firstName: name,
+            lastName: name,
+            dateOfBirth: dateString,
+            phoneNumber: phoneNumber
+        )
+        
+        signUpUseCase.execute(signupRequest: user)
             .flatMap { [weak self] user -> AnyPublisher<Void, Error> in
-                guard let self = self else {
+                guard self != nil else {
                     return Fail(error: NSError(domain: "SignUpError", code: -1, userInfo: nil))
                         .eraseToAnyPublisher()
                 }
-                
-                let userWithName = User(
-                    uid: user.uid,
-                    email: self.email,
-                    displayName: self.name
-                )
                 
                 return Just(()).setFailureType(to: Error.self).eraseToAnyPublisher()
             }
@@ -117,9 +126,9 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
                 switch completion {
                 case .finished:
                     self?._output.send(.successfullSignUp)
-                    self?.authenticationCoordinator.successfullLogin()
+                    self?.authenticationCoordinator.goBack(animated: true)
                 case .failure(let error):
-//                    let mappedError: SignUpError = ErrorMapper.map(error)
+                    print(error.localizedDescription)
                     self?._output.send(.signUpError)
                 }
             } receiveValue: { _ in
@@ -152,20 +161,28 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
         guard !name.isEmpty,
               !email.isEmpty,
               !password.isEmpty,
-              !confirmPasswod.isEmpty else {
-//            _output.send(.signUpError(.unknownError("All fields are required")))
+              !confirmPasswod.isEmpty,
+              !phoneNumber.isEmpty else {
+            _output.send(.signUpError)
             return false
         }
         
         guard password == confirmPasswod else {
-//            _output.send(.signUpError(.unknownError("Passwords do not match")))
+            _output.send(.signUpError)
             return false
         }
         
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
         guard emailPredicate.evaluate(with: email) else {
-//            _output.send(.signUpError(.invalidEmail))
+            _output.send(.signUpError)
+            return false
+        }
+        
+        let phoneRegex = "^[0-9+]{9,15}$"
+        let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
+        guard phonePredicate.evaluate(with: phoneNumber) else {
+            _output.send(.signUpError)
             return false
         }
         
