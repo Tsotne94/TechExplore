@@ -10,6 +10,7 @@ public extension DependencyContainer {
         DependencyContainer.root.register {
             Module { DefaultAppStateRepository() as AppStateRepository }
             Module { DefaultAuthenticationRepository() as AuthenticationRepository }
+            Module { DefaultKeyChainRepository() as KeyChainRepository }
         }
     }
 }

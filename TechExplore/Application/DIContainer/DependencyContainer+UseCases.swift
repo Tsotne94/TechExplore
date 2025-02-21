@@ -13,6 +13,10 @@ public extension DependencyContainer {
             Module { DefaultSignInUseCase() as SignInUseCase }
             Module { DefaultSignUpUseCase() as SignUpUseCase }
             Module { DefaultSignOutUseCase() as SignOutUseCase }
+            Module { DefaultKeyChainDeleteDataUseCase() as KeyChainDeleteDataUseCase }
+            Module { DefaultKeyChainRetriveDataUseCase() as KeyChainRetriveDataUseCase }
+            Module { DefaultKeyChainSaveDataUseCase() as KeyChainSaveDataUseCase }
+            Module { DefaultKeyChainUpdateDataUseCase() as KeyChainUpdateDataUseCase }
         }
     }
 }

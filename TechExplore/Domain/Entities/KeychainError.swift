@@ -5,6 +5,8 @@
 //  Created by Cotne Chubinidze on 21.02.25.
 //
 
+import Foundation
+
 enum KeychainError: LocalizedError {
     case itemNotFound
     case unexpectedDataFormat
