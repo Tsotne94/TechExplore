@@ -39,6 +39,7 @@ enum LoginViewModelOutputAction {
 
 final class DefaultLoginViewModel: LoginViewModel, ObservableObject {
     @Inject private var authenticationCoordinator: AuthenticationCoordinator
+    @Inject private var saveInKeyChainUseCase: KeyChainSaveDataUseCase
     @Inject private var signInUseCase: SignInUseCase
     
     @Published var email: String = ""
@@ -77,7 +78,7 @@ final class DefaultLoginViewModel: LoginViewModel, ObservableObject {
     
     func logIn() {
         isLoading = true
-        signInUseCase.execute(email: email, password: password)
+        signInUseCase.execute(email: email.lowercased(), password: password)
             .receive(on: DispatchQueue.main)
             .handleEvents(receiveCompletion: { [weak self] _ in
                 self?.isLoading = false
@@ -85,17 +86,46 @@ final class DefaultLoginViewModel: LoginViewModel, ObservableObject {
             .sink { [weak self] completion in
                 switch completion {
                 case .failure(let error):
+                    print(error.localizedDescription)
                     self?._output.send(.loginError)
                 case .finished:
                     break
                 }
-            } receiveValue: { [weak self] _ in
-                self?._output.send(.successfullLogin)
-                self?.authenticationCoordinator.successfullLogin()
+            } receiveValue: { [weak self] tokens in
+                self?.handleLogin(loginresponse: tokens)
             }
             .store(in: &subscriptions)
     }
-
+    private func handleLogin(loginresponse: LoginResponse) {
+        guard let bearer = loginresponse.access.data(using: .utf8) else {
+            _output.send(.loginError)
+            return
+        }
+        
+        guard let refresh = loginresponse.refresh.data(using: .utf8) else {
+            _output.send(.loginError)
+            return
+        }
+        
+        let saveBearer = saveInKeyChainUseCase.execute(key: "bearer", data: bearer)
+        let saveRefresh = saveInKeyChainUseCase.execute(key: "refresh", data: refresh)
+        
+        Publishers.Zip(saveBearer, saveRefresh)
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                switch completion {
+                case .finished:
+                    print("Successfully saved both tokens")
+                case .failure(let error):
+                    print("Error saving tokens: \(error.localizedDescription)")
+                    self._output.send(.loginError)
+                }
+            } receiveValue: { _, _ in
+                self._output.send(.successfullLogin)
+                self.authenticationCoordinator.successfullLogin()
+            }
+            .store(in: &subscriptions)
+    }
     func showPassword() {
         passwordIsHidden = false
     }

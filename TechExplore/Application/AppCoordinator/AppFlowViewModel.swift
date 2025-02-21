@@ -39,7 +39,7 @@ public final class DefaultAppFlowViewModel: AppFlowViewModel {
     private var subscriptions = Set<AnyCancellable>()
     
     public init() {
-        loadAppState()
+//        loadAppState()
     }
     
     public func startAuthentication() {

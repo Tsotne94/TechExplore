@@ -29,16 +29,20 @@ public struct DefaultKeyChainRepository: KeyChainRepository {
             case errSecSuccess:
                 promise(.success(()))
             case errSecItemNotFound:
-                self.saveData(key: key, data: newData)
-                    .sink(
-                        receiveCompletion: { completion in
-                            if case .failure(let error) = completion {
-                                promise(.failure(error))
-                            }
-                        },
-                        receiveValue: { promise(.success(())) }
-                    )
-                    .cancel()
+                let saveQuery: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrAccount as String: key,
+                    kSecValueData as String: newData
+                ]
+                
+                let saveStatus = SecItemAdd(saveQuery as CFDictionary, nil)
+                
+                switch saveStatus {
+                case errSecSuccess:
+                    promise(.success(()))
+                default:
+                    promise(.failure(KeychainError.unhandledError(status: saveStatus)))
+                }
             default:
                 promise(.failure(KeychainError.unhandledError(status: status)))
             }
@@ -60,16 +64,24 @@ public struct DefaultKeyChainRepository: KeyChainRepository {
             case errSecSuccess:
                 promise(.success(()))
             case errSecDuplicateItem:
-                self.updateData(key: key, newData: data)
-                    .sink(
-                        receiveCompletion: { completion in
-                            if case .failure(let error) = completion {
-                                promise(.failure(error))
-                            }
-                        },
-                        receiveValue: { promise(.success(())) }
-                    )
-                    .cancel()
+                // Instead of recursively calling updateData, update directly
+                let updateQuery: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrAccount as String: key
+                ]
+                
+                let attributes: [String: Any] = [
+                    kSecValueData as String: data
+                ]
+                
+                let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+                
+                switch updateStatus {
+                case errSecSuccess:
+                    promise(.success(()))
+                default:
+                    promise(.failure(KeychainError.unhandledError(status: updateStatus)))
+                }
             default:
                 promise(.failure(KeychainError.unhandledError(status: status)))
             }
