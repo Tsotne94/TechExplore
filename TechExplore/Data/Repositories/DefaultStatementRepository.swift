@@ -10,10 +10,16 @@ import Combine
 import MyNetworkManager
 
 public struct DefaultStatementRepository: StatementsRepository {
-    @Inject private var retriveDataFromKeyChain: KeyChainRetriveDataUseCase
+    @Inject private var retrieveDataFromKeyChain: KeyChainRetriveDataUseCase
     @Inject private var saveInKeyChain: KeyChainSaveDataUseCase
-    private let networkManager: NetworkManager = NetworkManager()
-    private let requestMaker: RequestMaker = RequestMaker.shared
+    private let networkManager = NetworkManager()
+    private let requestMaker = RequestMaker.shared
+    
+    private enum Constants {
+        static let bearerKey = "bearer"
+        static let refreshKey = "refresh"
+        static let maxRetryCount = 1
+    }
     
     public init() { }
     
@@ -33,7 +39,7 @@ public struct DefaultStatementRepository: StatementsRepository {
         )
     }
     
-    public func getCategories() -> AnyPublisher<[Category], any Error> {
+    public func getCategories() -> AnyPublisher<[Category], Error> {
         getTokenAndExecuteRequest(
             urlString: APIEndpointsEnum.categories,
             modelType: [Category].self,
@@ -41,21 +47,21 @@ public struct DefaultStatementRepository: StatementsRepository {
         )
     }
     
-    private func getTokenAndExecuteRequest<T: Codable & Sendable>(
-        urlString: String,
-        modelType: T.Type,
-        methodType: HTTPMethodType
-    ) -> AnyPublisher<T, Error> {
-        retriveDataFromKeyChain.execute(key: "bearer")
-            .flatMap { bearerData -> AnyPublisher<T, Error> in
+    public func apply(statementId: Int) -> AnyPublisher<Void, Error> {
+        let urlString = APIEndpointsEnum.specificPost + "\(statementId)" + "/apply/"
+        print(urlString)
+        
+        return retrieveDataFromKeyChain.execute(key: Constants.bearerKey)
+            .tryMap { bearerData -> String in
                 guard let token = String(data: bearerData, encoding: .utf8) else {
-                    return Fail(error: KeychainError.unexpectedDataFormat).eraseToAnyPublisher()
+                    throw KeychainError.unexpectedDataFormat
                 }
-                return executeRequestWithRefresh(
+                return token
+            }
+            .flatMap { token in
+                self.executeApplyRequestWithRefresh(
                     urlString: urlString,
-                    modelType: modelType,
-                    bearer: token,
-                    methodType: methodType
+                    bearer: token
                 )
             }
             .eraseToAnyPublisher()
@@ -66,28 +72,91 @@ public struct DefaultStatementRepository: StatementsRepository {
         var queryItems: [URLQueryItem] = []
         
         if let category = category {
-            queryItems.append(URLQueryItem(name: "category", value: "\(category.id)"))
+            queryItems.append(URLQueryItem(name: "categories", value: "\(category.id)"))
         }
-        if let query = query {
-            queryItems.append(URLQueryItem(name: "query", value: query))
+        if let query = query, !query.isEmpty {
+            queryItems.append(URLQueryItem(name: "search", value: query))
         }
         
         urlComponents.queryItems = queryItems.isEmpty ? nil : queryItems
-        return urlComponents.url!.absoluteString
+        return urlComponents.url?.absoluteString ?? APIEndpointsEnum.statement
+    }
+    
+    private func getTokenAndExecuteRequest<T: Codable & Sendable>(
+        urlString: String,
+        modelType: T.Type,
+        methodType: HTTPMethodType
+    ) -> AnyPublisher<T, Error> {
+        retrieveDataFromKeyChain.execute(key: Constants.bearerKey)
+            .tryMap { bearerData -> String in
+                guard let token = String(data: bearerData, encoding: .utf8) else {
+                    throw KeychainError.unexpectedDataFormat
+                }
+                return token
+            }
+            .flatMap { token in
+                executeRequestWithRefresh(
+                    urlString: urlString,
+                    modelType: modelType,
+                    bearer: token,
+                    methodType: methodType
+                )
+            }
+            .eraseToAnyPublisher()
     }
     
     private func executeRequestWithRefresh<T: Codable & Sendable>(
         urlString: String,
         modelType: T.Type,
         bearer: String,
-        methodType: HTTPMethodType
+        methodType: HTTPMethodType,
+        retryCount: Int = 0
     ) -> AnyPublisher<T, Error> {
         makeInitialRequest(urlString: urlString, modelType: modelType, bearer: bearer, methodType: methodType)
-            .catch { error -> AnyPublisher<T, Error> in
-                guard let nsError = error as NSError?, nsError.code == 401 else {
-                    return Fail(error: error).eraseToAnyPublisher()
+            .tryCatch { error -> AnyPublisher<T, Error> in
+                guard let nsError = error as NSError?,
+                      nsError.code == 401,
+                      retryCount < Constants.maxRetryCount else {
+                    throw error
                 }
-                return handleTokenRefresh(urlString: urlString, modelType: modelType, methodType: methodType)
+                
+                return refreshToken()
+                    .flatMap { newToken in
+                        executeRequestWithRefresh(
+                            urlString: urlString,
+                            modelType: modelType,
+                            bearer: newToken,
+                            methodType: methodType,
+                            retryCount: retryCount + 1
+                        )
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func executeApplyRequestWithRefresh(
+        urlString: String,
+        bearer: String,
+        retryCount: Int = 0
+    ) -> AnyPublisher<Void, Error> {
+        makeApplyRequest(urlString: urlString, bearer: bearer)
+            .tryCatch { error -> AnyPublisher<Void, Error> in
+                guard let nsError = error as NSError?,
+                      nsError.code == 401,
+                      retryCount < Constants.maxRetryCount else {
+                    throw error
+                }
+                
+                return refreshToken()
+                    .flatMap { newToken in
+                        executeApplyRequestWithRefresh(
+                            urlString: urlString,
+                            bearer: newToken,
+                            retryCount: retryCount + 1
+                        )
+                    }
+                    .eraseToAnyPublisher()
             }
             .eraseToAnyPublisher()
     }
@@ -112,31 +181,36 @@ public struct DefaultStatementRepository: StatementsRepository {
         }.eraseToAnyPublisher()
     }
     
-    private func handleTokenRefresh<T: Codable & Sendable>(
-        urlString: String,
-        modelType: T.Type,
-        methodType: HTTPMethodType
-    ) -> AnyPublisher<T, Error> {
-        refreshToken()
-            .flatMap { newToken in
-                makeInitialRequest(
-                    urlString: urlString,
-                    modelType: modelType,
-                    bearer: newToken,
-                    methodType: methodType
-                )
+    private func makeApplyRequest(urlString: String, bearer: String) -> AnyPublisher<Void, Error> {
+        Future { promise in
+            self.requestMaker.request(
+                urlString: urlString,
+                modelType: ApplicationModel.self,
+                networkManager: self.networkManager,
+                bearer: bearer,
+                body: nil as EmptyBody?,
+                methodType: .post
+            ) { result in
+                switch result {
+                case .success:
+                    promise(.success(()))
+                case .failure(let error):
+                    promise(.failure(error))
+                }
             }
-            .eraseToAnyPublisher()
+        }.eraseToAnyPublisher()
     }
     
     private func refreshToken() -> AnyPublisher<String, Error> {
-        retriveDataFromKeyChain.execute(key: "refresh")
-            .flatMap { refreshData -> AnyPublisher<String, Error> in
+        retrieveDataFromKeyChain.execute(key: Constants.refreshKey)
+            .tryMap { refreshData -> String in
                 guard let refreshToken = String(data: refreshData, encoding: .utf8) else {
-                    return Fail(error: KeychainError.unexpectedDataFormat).eraseToAnyPublisher()
+                    throw KeychainError.unexpectedDataFormat
                 }
-                
-                return performTokenRefresh(with: refreshToken)
+                return refreshToken
+            }
+            .flatMap { refreshToken in
+                performTokenRefresh(with: refreshToken)
             }
             .eraseToAnyPublisher()
     }
@@ -168,7 +242,7 @@ public struct DefaultStatementRepository: StatementsRepository {
             return
         }
         
-        saveInKeyChain.execute(key: "bearer", data: tokenData)
+        let _: AnyCancellable = saveInKeyChain.execute(key: Constants.bearerKey, data: tokenData)
             .sink(
                 receiveCompletion: { completion in
                     if case .failure(let error) = completion {
@@ -179,6 +253,5 @@ public struct DefaultStatementRepository: StatementsRepository {
                     promise(.success(token))
                 }
             )
-            .cancel()
     }
 }

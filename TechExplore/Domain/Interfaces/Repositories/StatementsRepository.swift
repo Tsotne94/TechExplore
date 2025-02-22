@@ -11,5 +11,5 @@ public protocol StatementsRepository {
     func getStatements(category: Category?, query: String?) -> AnyPublisher<[Statement], Error>
     func getSpecificStatement(id: Int) -> AnyPublisher<Statement, Error>
     func getCategories() -> AnyPublisher<[Category], Error>
-    
+    func apply(statementId: Int) -> AnyPublisher<Void, Error>
 }

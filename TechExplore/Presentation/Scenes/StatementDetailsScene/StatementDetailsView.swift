@@ -10,6 +10,7 @@ import SwiftUI
 struct StatementDetailsView: View {
     @StateObject private var viewModel: StatementDetailsViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingConfirmation: Bool = false
     
     init(id: Int) {
         _viewModel = StateObject(wrappedValue: StatementDetailsViewModel(id: id))
@@ -41,6 +42,16 @@ struct StatementDetailsView: View {
         }
         .navigationBarHidden(true)
         .background(Color(.systemBackground))
+        .alert("Application Received", isPresented: $showingConfirmation) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Thank you for your application! We will review it shortly.")
+        }
+        .onChange(of: viewModel.isApplied) { _, newValue in
+            if newValue {
+                showingConfirmation = true 
+            }
+        }
     }
     
     private func contentView(statement: Statement) -> some View {
@@ -196,22 +207,25 @@ struct StatementDetailsView: View {
     
     private var floatingApplyButton: some View {
         Button {
-            // Apply action
+            viewModel.apply()
         } label: {
             HStack(spacing: 8) {
-                Text("Apply Now")
+                Text(viewModel.isApplied ? "Applied" : "Apply Now")
                     .font(.system(size: 16, weight: .semibold))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                if !viewModel.isApplied {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
             }
             .foregroundColor(.white)
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
-            .background(Color.green)
+            .background(viewModel.isApplied ? Color.gray : Color.green)
             .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            .shadow(color: .black.opacity(viewModel.isApplied ? 0 : 0.15), radius: 8, x: 0, y: 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
+        .disabled(viewModel.isApplied || viewModel.isLoading)
     }
 }

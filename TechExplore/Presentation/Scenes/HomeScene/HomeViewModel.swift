@@ -10,73 +10,37 @@ import Combine
 
 final class HomeViewModel: ObservableObject {
     @Inject private var homeTabCoordinator: HomeTabCoordinator
-    @Inject private var appflowcoordinator: AppFlowCoordinator
+    @Inject private var appFlowCoordinator: AppFlowCoordinator
     @Inject private var getStatementsUseCase: FetchStatementsUseCase
     @Inject private var getCategoriesUseCase: FetchStatementCategories
     
-    @Published var statements: [Statement] = []
-    @Published var filteredStatements: [Statement] = []
-    @Published var categories: [Category] = []
-    @Published var selectedCategory: Category? = nil
+    @Published private(set) var statements: [Statement] = []
+    @Published private(set) var categories: [Category] = []
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var error: Error?
+    
+    @Published var selectedCategory: Category? = nil {
+        didSet {
+            fetchStatements()
+        }
+    }
+    
     @Published var searchText = ""
-    @Published var isSearching: Bool = false
+    @Published var isSearching: Bool = false {
+        didSet {
+            if !isSearching {
+                searchText = ""
+                fetchStatements()
+            }
+        }
+    }
     
     private var cancellables = Set<AnyCancellable>()
+    private let debounceInterval: DispatchQueue.SchedulerTimeType.Stride = .milliseconds(300)
     
     init() {
-        setupBindings()
-        fetchCategories()
-        fetchStatements()
-    }
-    
-    func fetchStatements() {
-        getStatementsUseCase.execute(category: selectedCategory, query: searchText.isEmpty ? nil : searchText)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
-                    print("Error fetching statements: \(error)")
-                    self?.appflowcoordinator.viewModel.startAuthentication()
-                }
-            } receiveValue: { [weak self] statements in
-                self?.statements = statements
-                self?.filterStatements()
-            }
-            .store(in: &cancellables)
-    }
-    
-    private func fetchCategories() {
-        getCategoriesUseCase.execute()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                switch completion {
-                case .finished:
-                    break
-                case .failure(let error):
-                    print("Failed to fetch categories:", error)
-                    self?.appflowcoordinator.viewModel.startAuthentication()
-                }
-            } receiveValue: { [weak self] categories in
-                self?.categories = categories
-            }
-            .store(in: &cancellables) 
-    }
-    
-    private func filterStatements() {
-        filteredStatements = statements.filter { statement in
-            if searchText.isEmpty && selectedCategory == nil { return true }
-            
-            let matchesSearch = searchText.isEmpty ||
-            statement.content.localizedCaseInsensitiveContains(searchText) ||
-                statement.content.localizedCaseInsensitiveContains(searchText)
-            
-            let matchesCategory = selectedCategory == nil ||
-            statement.categories.contains(where: { $0 == selectedCategory })
-            
-            return matchesSearch && matchesCategory
-        }
+        setupInitialData()
+        setupSearchSubscription()
     }
     
     func goToDetails(statement: Statement) {
@@ -85,23 +49,66 @@ final class HomeViewModel: ObservableObject {
     
     func updateSelectedCategory(_ category: Category?) {
         selectedCategory = category
-        fetchStatements()
     }
     
     func toggleSearch(_ isActive: Bool) {
         isSearching = isActive
-        if !isActive {
-            searchText = ""
-            fetchStatements()
-        }
     }
     
-    private func setupBindings() {
+    func refreshData() {
+        setupInitialData()
+    }
+    
+    private func setupInitialData() {
+        fetchCategories()
+        fetchStatements()
+    }
+    
+    private func setupSearchSubscription() {
         $searchText
-            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .debounce(for: debounceInterval, scheduler: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.fetchStatements()
             }
             .store(in: &cancellables)
+    }
+    
+    private func fetchStatements() {
+        isLoading = true
+        error = nil
+        
+        getStatementsUseCase.execute(
+            category: selectedCategory,
+            query: searchText.isEmpty ? nil : searchText
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] completion in
+            self?.isLoading = false
+            if case .failure(let error) = completion {
+                self?.handleError(error)
+            }
+        } receiveValue: { [weak self] statements in
+            self?.statements = statements
+        }
+        .store(in: &cancellables)
+    }
+    
+    private func fetchCategories() {
+        getCategoriesUseCase.execute()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                if case .failure(let error) = completion {
+                    self?.handleError(error)
+                }
+            } receiveValue: { [weak self] categories in
+                self?.categories = categories
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func handleError(_ error: Error) {
+        self.error = error
+        print("Error: \(error)")
+        appFlowCoordinator.viewModel.startAuthentication()
     }
 }
