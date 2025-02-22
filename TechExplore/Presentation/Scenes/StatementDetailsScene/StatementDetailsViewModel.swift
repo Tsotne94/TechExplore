@@ -12,10 +12,12 @@ final class StatementDetailsViewModel: ObservableObject {
     @Inject private var appFlowCoordinator: AppFlowCoordinator
     @Inject private var homeTabCoordinator: HomeTabCoordinator
     @Inject private var getSpecificStatementUseCase: FetchSpecificStatementUseCase
+    @Inject private var applyUseCase: ApplyUseCase
     
     @Published var statement: Statement?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var isApplied: Bool = false
     
     private var cancellables = Set<AnyCancellable>()
     private let id: Int
@@ -42,5 +44,25 @@ final class StatementDetailsViewModel: ObservableObject {
     
     func goBack() {
         homeTabCoordinator.goBack()
+    }
+    
+    func apply() {
+        guard !isApplied, let statement = statement else { return }
+        
+        isLoading = true
+        applyUseCase.execute(id: statement.id)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
+                self?.isLoading = false
+                switch completion {
+                case .finished:
+                    self?.isApplied = true
+                case .failure(let error):
+                    self?.errorMessage = "Failed to apply: \(error.localizedDescription)"
+                }
+            } receiveValue: { _ in
+                
+            }
+            .store(in: &cancellables)
     }
 }

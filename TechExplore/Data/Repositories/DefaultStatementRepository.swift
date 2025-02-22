@@ -9,15 +9,12 @@ import Foundation
 import Combine
 import MyNetworkManager
 
-// MARK: - Statement Repository Implementation
 public struct DefaultStatementRepository: StatementsRepository {
-    // MARK: - Dependencies
     @Inject private var retrieveDataFromKeyChain: KeyChainRetriveDataUseCase
     @Inject private var saveInKeyChain: KeyChainSaveDataUseCase
     private let networkManager = NetworkManager()
     private let requestMaker = RequestMaker.shared
     
-    // MARK: - Constants
     private enum Constants {
         static let bearerKey = "bearer"
         static let refreshKey = "refresh"
@@ -26,7 +23,6 @@ public struct DefaultStatementRepository: StatementsRepository {
     
     public init() { }
     
-    // MARK: - Public Methods
     public func getStatements(category: Category?, query: String?) -> AnyPublisher<[Statement], Error> {
         getTokenAndExecuteRequest(
             urlString: constructStatementsURL(category: category, query: query),
@@ -51,7 +47,26 @@ public struct DefaultStatementRepository: StatementsRepository {
         )
     }
     
-    // MARK: - Private Methods
+    public func apply(statementId: Int) -> AnyPublisher<Void, Error> {
+        let urlString = APIEndpointsEnum.specificPost + "\(statementId)" + "/apply/"
+        print(urlString)
+        
+        return retrieveDataFromKeyChain.execute(key: Constants.bearerKey)
+            .tryMap { bearerData -> String in
+                guard let token = String(data: bearerData, encoding: .utf8) else {
+                    throw KeychainError.unexpectedDataFormat
+                }
+                return token
+            }
+            .flatMap { token in
+                self.executeApplyRequestWithRefresh(
+                    urlString: urlString,
+                    bearer: token
+                )
+            }
+            .eraseToAnyPublisher()
+    }
+    
     private func constructStatementsURL(category: Category?, query: String?) -> String {
         var urlComponents = URLComponents(string: APIEndpointsEnum.statement)!
         var queryItems: [URLQueryItem] = []
@@ -120,6 +135,32 @@ public struct DefaultStatementRepository: StatementsRepository {
             .eraseToAnyPublisher()
     }
     
+    private func executeApplyRequestWithRefresh(
+        urlString: String,
+        bearer: String,
+        retryCount: Int = 0
+    ) -> AnyPublisher<Void, Error> {
+        makeApplyRequest(urlString: urlString, bearer: bearer)
+            .tryCatch { error -> AnyPublisher<Void, Error> in
+                guard let nsError = error as NSError?,
+                      nsError.code == 401,
+                      retryCount < Constants.maxRetryCount else {
+                    throw error
+                }
+                
+                return refreshToken()
+                    .flatMap { newToken in
+                        executeApplyRequestWithRefresh(
+                            urlString: urlString,
+                            bearer: newToken,
+                            retryCount: retryCount + 1
+                        )
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }
+    
     private func makeInitialRequest<T: Codable & Sendable>(
         urlString: String,
         modelType: T.Type,
@@ -136,6 +177,26 @@ public struct DefaultStatementRepository: StatementsRepository {
                 methodType: methodType
             ) { result in
                 promise(result)
+            }
+        }.eraseToAnyPublisher()
+    }
+    
+    private func makeApplyRequest(urlString: String, bearer: String) -> AnyPublisher<Void, Error> {
+        Future { promise in
+            self.requestMaker.request(
+                urlString: urlString,
+                modelType: ApplicationModel.self,
+                networkManager: self.networkManager,
+                bearer: bearer,
+                body: nil as EmptyBody?,
+                methodType: .post
+            ) { result in
+                switch result {
+                case .success:
+                    promise(.success(()))
+                case .failure(let error):
+                    promise(.failure(error))
+                }
             }
         }.eraseToAnyPublisher()
     }

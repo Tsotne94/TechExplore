@@ -12,6 +12,6 @@ enum APIEndpointsEnum {
     static let refresh = "http://3.72.251.137:8000/user/refresh/"
     static let currentUser = "http://3.72.251.137:8000/user/currentuser/"
     static let statement = "http://3.72.251.137:8000/post/"
-    static let specificPost = "http://3.72.251.137:8000/post/" //+id then
+    static let specificPost = "http://3.72.251.137:8000/post/" //+id then // id / apply/
     static let categories = "http://3.72.251.137:8000/post/category/"
 }
