@@ -10,6 +10,11 @@ import Combine
 import MyNetworkManager
 
 public struct DefaultAuthenticationRepository: AuthenticationRepository {
+    @Inject private var retriveDataFromKeyChain: KeyChainRetriveDataUseCase
+    @Inject private var saveInKeyChain: KeyChainSaveDataUseCase
+    private let networkManager: NetworkManager = NetworkManager()
+    private let requestMaker: RequestMaker = RequestMaker.shared
+    
     public init() { }
     
     public func signUp(signupRequest: SignUpRequest) -> AnyPublisher<SignUpResponse, any Error> {
@@ -59,127 +64,151 @@ public struct DefaultAuthenticationRepository: AuthenticationRepository {
     }
     
     public func getCurrentUser() -> AnyPublisher<User, Error> {
-        Empty<User, Error>().eraseToAnyPublisher()
+        getTokenAndExecuteRequest(
+            urlString: APIEndpointsEnum.currentUser,
+            modelType: User.self,
+            methodType: .get
+        )
+    }
+    
+    private func getTokenAndExecuteRequest<T: Codable & Sendable>(
+        urlString: String,
+        modelType: T.Type,
+        methodType: HTTPMethodType
+    ) -> AnyPublisher<T, Error> {
+        retriveDataFromKeyChain.execute(key: "bearer")
+            .flatMap { bearerData -> AnyPublisher<T, Error> in
+                guard let token = String(data: bearerData, encoding: .utf8) else {
+                    return Fail(error: KeychainError.unexpectedDataFormat).eraseToAnyPublisher()
+                }
+                return executeRequestWithRefresh(
+                    urlString: urlString,
+                    modelType: modelType,
+                    bearer: token,
+                    methodType: methodType
+                )
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func constructStatementsURL(category: Category?, query: String?) -> String {
+        var urlComponents = URLComponents(string: APIEndpointsEnum.statement)!
+        var queryItems: [URLQueryItem] = []
+        
+        if let category = category {
+            queryItems.append(URLQueryItem(name: "category", value: "\(category.id)"))
+        }
+        if let query = query {
+            queryItems.append(URLQueryItem(name: "query", value: query))
+        }
+        
+        urlComponents.queryItems = queryItems.isEmpty ? nil : queryItems
+        return urlComponents.url!.absoluteString
+    }
+    
+    private func executeRequestWithRefresh<T: Codable & Sendable>(
+        urlString: String,
+        modelType: T.Type,
+        bearer: String,
+        methodType: HTTPMethodType
+    ) -> AnyPublisher<T, Error> {
+        makeInitialRequest(urlString: urlString, modelType: modelType, bearer: bearer, methodType: methodType)
+            .catch { error -> AnyPublisher<T, Error> in
+                guard let nsError = error as NSError?, nsError.code == 401 else {
+                    return Fail(error: error).eraseToAnyPublisher()
+                }
+                return handleTokenRefresh(urlString: urlString, modelType: modelType, methodType: methodType)
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func makeInitialRequest<T: Codable & Sendable>(
+        urlString: String,
+        modelType: T.Type,
+        bearer: String,
+        methodType: HTTPMethodType
+    ) -> AnyPublisher<T, Error> {
+        Future { promise in
+            self.requestMaker.request(
+                urlString: urlString,
+                modelType: modelType,
+                networkManager: self.networkManager,
+                bearer: bearer,
+                body: nil as EmptyBody?,
+                methodType: methodType
+            ) { result in
+                promise(result)
+            }
+        }.eraseToAnyPublisher()
+    }
+    
+    private func handleTokenRefresh<T: Codable & Sendable>(
+        urlString: String,
+        modelType: T.Type,
+        methodType: HTTPMethodType
+    ) -> AnyPublisher<T, Error> {
+        refreshToken()
+            .flatMap { newToken in
+                makeInitialRequest(
+                    urlString: urlString,
+                    modelType: modelType,
+                    bearer: newToken,
+                    methodType: methodType
+                )
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func refreshToken() -> AnyPublisher<String, Error> {
+        retriveDataFromKeyChain.execute(key: "refresh")
+            .flatMap { refreshData -> AnyPublisher<String, Error> in
+                guard let refreshToken = String(data: refreshData, encoding: .utf8) else {
+                    return Fail(error: KeychainError.unexpectedDataFormat).eraseToAnyPublisher()
+                }
+                
+                return performTokenRefresh(with: refreshToken)
+            }
+            .eraseToAnyPublisher()
+    }
+    
+    private func performTokenRefresh(with refreshToken: String) -> AnyPublisher<String, Error> {
+        Future { promise in
+            let refreshRequest = RefreshRequest(refresh: refreshToken)
+            self.requestMaker.request(
+                urlString: APIEndpointsEnum.refresh,
+                modelType: RefreshResponse.self,
+                networkManager: self.networkManager,
+                bearer: nil,
+                body: refreshRequest,
+                methodType: .post
+            ) { result in
+                switch result {
+                case .success(let response):
+                    self.saveNewToken(response.access, promise: promise)
+                case .failure(let error):
+                    promise(.failure(error))
+                }
+            }
+        }.eraseToAnyPublisher()
+    }
+    
+    private func saveNewToken(_ token: String, promise: @escaping (Result<String, Error>) -> Void) {
+        guard let tokenData = token.data(using: .utf8) else {
+            promise(.failure(KeychainError.unexpectedDataFormat))
+            return
+        }
+        
+        saveInKeyChain.execute(key: "bearer", data: tokenData)
+            .sink(
+                receiveCompletion: { completion in
+                    if case .failure(let error) = completion {
+                        promise(.failure(error))
+                    }
+                },
+                receiveValue: { _ in
+                    promise(.success(token))
+                }
+            )
+            .cancel()
     }
 }
-
-//
-//func fetchedAvatars(api: String){
-//    Task {
-//      do {
-//        var token = try keyService.retrieveAccessToken()
-//        var headers = ["Authorization": "Bearer \(token)"]
-//        
-//        do {
-//          try await getAvatars(api: api, headers: headers)
-//        } catch {
-//          if case NetworkError.statusCodeError(let statusCode) = error, statusCode == 401 {
-//            try await tokenNetwork.getNewToken()
-//            token = try keyService.retrieveAccessToken()
-//            headers = ["Authorization": "Bearer \(token)"]
-//            
-//            try await getAvatars(api: api, headers: headers)
-//          } else {
-//            throw error
-//          }
-//        }
-//      } catch {
-//        handleNetworkError(error)
-//      }
-//    }
-//  }
-//catch {
-//    if case NetworkError.statusCodeError(let statusCode) = error, statusCode == 401 {}
-//}
-//
-//func getNewToken() async throws {
-//    let oldToken = try? keyService.retrieveAccessToken()
-//    print("⚠️ Old Token: \(oldToken ?? "Unavailable")")
-//    
-//    guard let refreshToken = try? keyService.retrieveRefreshToken() else {
-//      print("❌ Missing Refresh Token")
-//      throw NetworkError.noData
-//    }
-//    
-//    let url = EndpointsEnum.token.rawValue
-//    let body = RefreshTokenModel(refresh: refreshToken)
-//    do {
-//      let response: AccessTokenModel = try await webService.postData(
-//        urlString: url,
-//        headers: nil,
-//        body: body
-//      )
-//      print("🏆 New Token Retrieved: \(response)")
-//      try keyService.storeAccessTokens(access: response.access)
-//    } catch {
-//      print("❌ Failed to Refresh Token: \(error.localizedDescription)")
-//      throw error
-//    }
-//  }
-//
-//protocol AuthenticatedRequestHandlerProtocol {
-//    func sendRequest<T: Decodable>(urlString: String, method: HTTPMethod, headers: [String: String]?, body: Data?, decoder: JSONDecoder) async throws -> T?
-//}
-//
-//final class AuthenticatedRequestHandler: AuthenticatedRequestHandlerProtocol {
-//    private let keyChainManager: KeyChainManagerProtocol
-//    private let networkService: NetworkServiceProtocol
-//    
-//    init(keyChainManager: KeyChainManagerProtocol = KeyChainManager(), networkService: NetworkServiceProtocol = NetworkService()) {
-//        self.keyChainManager = keyChainManager
-//        self.networkService = networkService
-//    }
-//    
-//    func sendRequest<T: Decodable>(urlString: String, method: HTTPMethod, headers: [String: String]? = nil, body: Data? = nil, decoder: JSONDecoder = JSONDecoder()) async throws -> T? {
-//            var headers = headers ?? [:]
-//            
-//            if let token = try? keyChainManager.getAccessToken() {
-//                headers["Authorization"] = "Bearer \(token)"
-//            } else {
-//                throw AuthError.accessTokenMissing
-//            }
-//            
-//            do {
-//                let response: T? =  try await networkService.request(urlString: urlString, method: method, headers: headers, body: body, decoder: decoder)
-//                return response
-//            } catch  {
-//                try await refreshAccessToken()
-//                
-//                if let newAccessToken = try? keyChainManager.getAccessToken() {
-//                    headers["Authorization"] = "Bearer \(newAccessToken)"
-//                    let response: T? = try await networkService.request(urlString: urlString, method: method, headers: headers, body: body, decoder: decoder)
-//                    return response
-//                } else {
-//                    throw AuthError.accessTokenMissing
-//                }
-//            }
-//            
-//        }
-//    
-//    func refreshAccessToken() async throws {
-//            do {
-//                guard let refreshToken = try? keyChainManager.getRefreshToken() else {
-//                    throw AuthError.refreshTokenMissing
-//                }
-//                
-//                let refreshRequestBody: [String: String] = ["refreshToken": refreshToken]
-//                
-//                guard let bodyData = try? JSONEncoder().encode(refreshRequestBody) else {
-//                    throw AuthError.invalidRequestBody
-//                }
-//                
-//                let response: LoginResponse? = try await networkService.request(
-//                    urlString: "https://api.gargar.dev:8088/refresh",
-//                    method: .post,
-//                    headers: ["Content-Type": "application/json"],
-//                    body: bodyData,
-//                    decoder: JSONDecoder()
-//                )
-//                
-//                try keyChainManager.storeAccessToken(accessToken: response?.accessToken ?? "")
-//            } catch {
-//                try keyChainManager.clearTokens()
-//                throw AuthError.tokenRefreshFailed
-//            }
-//        }
-//}

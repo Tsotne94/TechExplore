@@ -9,9 +9,7 @@ import SwiftUI
 import PhotosUI
 
 struct ProfileView: View {
-    @State private var name = "John"
-    @State private var surname = "Doe"
-    @State private var email = "john.doe@example.com"
+    @StateObject private var viewModel = ProfileViewModel()
     @State private var showImagePicker = false
     @State private var profileUIImage: UIImage? = nil
     @State private var showingAlert = false
@@ -24,25 +22,40 @@ struct ProfileView: View {
     var body: some View {
         ZStack {
             backgroundColor.edgesIgnoringSafeArea(.all)
-            ScrollView {
-                VStack(spacing: 0) {
-                    headerSection
-                    
-                    VStack(spacing: 28) {
-                        userInformationSection
-                        profileFormSection
-                        logoutSection
+            
+            if viewModel.isLoading {
+                ProgressView()
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        headerSection
+                        
+                        VStack(spacing: 28) {
+                            userInformationSection
+                            profileFormSection
+                            logoutSection
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 25)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 25)
-                    .padding(.bottom, 40)
+                }
+                .padding(.bottom, UIScreen.main.bounds.height > 667 ? 60 : 10)
+                .refreshable {
+                    viewModel.fetchCurrentUser()
                 }
             }
-            .padding(.bottom, UIScreen.main.bounds.height > 667 ? 60 : 10)
         }
         .ignoresSafeArea(edges: .all)
         .sheet(isPresented: $showImagePicker) {
             ImagePicker(image: $profileUIImage)
+        }
+        .alert("Error", isPresented: .constant(viewModel.error != nil)) {
+            Button("OK") {
+                viewModel.error = nil
+            }
+        } message: {
+            Text(viewModel.error ?? "")
         }
     }
     
@@ -51,7 +64,10 @@ struct ProfileView: View {
             customGreen
                 .frame(height: 180)
                 .clipShape(
-                    UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20)
+                    UnevenRoundedRectangle(
+                        bottomLeadingRadius: 20,
+                        bottomTrailingRadius: 20
+                    )
                 )
                 .edgesIgnoringSafeArea(.top)
                 .shadow(color: shadowColor, radius: 8, y: 4)
@@ -100,11 +116,11 @@ struct ProfileView: View {
     
     private var userInformationSection: some View {
         VStack(spacing: 5) {
-            Text("\(name) \(surname)")
+            Text("\(viewModel.firstName) \(viewModel.lastName)")
                 .font(.title2)
                 .fontWeight(.bold)
             
-            Text(email)
+            Text(viewModel.email)
                 .font(.subheadline)
                 .foregroundColor(.gray)
         }
@@ -120,19 +136,19 @@ struct ProfileView: View {
             
             ProfileTextField(
                 title: "Name",
-                text: $name,
+                text: .constant(viewModel.firstName),
                 icon: "person.fill",
                 color: customGreen
             )
             
             ProfileTextField(
                 title: "Surname",
-                text: $surname,
+                text: .constant(viewModel.lastName),
                 icon: "person.text.rectangle.fill",
                 color: customGreen
             )
             
-            EmailDisplayField(email: email, color: customGreen)
+            EmailDisplayField(email: viewModel.email, color: customGreen)
         }
         .padding(20)
         .background(
@@ -167,7 +183,7 @@ struct ProfileView: View {
         .alert("Logout", isPresented: $showingAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Logout", role: .destructive) {
-                
+                viewModel.logout()
             }
         } message: {
             Text("Are you sure you want to logout?")
@@ -199,6 +215,7 @@ struct ProfileTextField: View {
                     .foregroundColor(.gray)
                 TextField(title, text: $text)
                     .font(.body)
+                    .disabled(true)
             }
         }
         .padding()
@@ -251,16 +268,32 @@ struct EmailDisplayField: View {
 
 struct ImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
+    @Environment(\.presentationMode) private var presentationMode
+
+    func makeUIViewController(context: UIViewControllerRepresentableContext<ImagePicker>) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
 
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        var parent: ImagePicker
+        let parent: ImagePicker
 
         init(_ parent: ImagePicker) {
             self.parent = parent
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-            picker.dismiss(animated: true)
+            parent.presentationMode.wrappedValue.dismiss()
+
             guard let provider = results.first?.itemProvider else { return }
 
             if provider.canLoadObject(ofClass: UIImage.self) {
@@ -272,22 +305,6 @@ struct ImagePicker: UIViewControllerRepresentable {
             }
         }
     }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
-        config.filter = .images
-        config.selectionLimit = 1
-
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
 }
 
 #Preview {

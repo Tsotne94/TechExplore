@@ -88,6 +88,16 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
             }.store(in: &subscriptions)
     }
     
+    private func extractNames(from fullName: String) -> (firstName: String, lastName: String) {
+        let components = fullName.trimmingCharacters(in: .whitespaces).components(separatedBy: " ")
+        if components.count > 1 {
+            let firstName = components[0]
+            let lastName = components.dropFirst().joined(separator: " ")
+            return (firstName, lastName)
+        }
+        return (fullName, "") 
+    }
+    
     func signUp() {
         isLoading = true
         
@@ -100,12 +110,14 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let dateString = dateFormatter.string(from: dateOfBirth)
         
+        let (firstName, lastName) = extractNames(from: name)
+        
         let user = SignUpRequest(
             email: email,
             password: password,
             confirmPassword: confirmPasswod,
-            firstName: name,
-            lastName: name,
+            firstName: firstName,
+            lastName: lastName,
             dateOfBirth: dateString,
             phoneNumber: phoneNumber
         )
@@ -137,32 +149,22 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
             .store(in: &subscriptions)
     }
     
-    func showPassword() {
-        passwordIsHidden = false
-    }
-    
-    func hidePassword() {
-        passwordIsHidden = true
-    }
-    
-    func showConfirmPassword() {
-        confirmPasswordHidden = false
-    }
-    
-    func hideConfirmPassword() {
-        confirmPasswordHidden = true
-    }
-    
-    func goToLogin() {
-        authenticationCoordinator.goBack(animated: true)
-    }
-    
     func validateInputs() -> Bool {
         guard !name.isEmpty,
               !email.isEmpty,
               !password.isEmpty,
               !confirmPasswod.isEmpty,
               !phoneNumber.isEmpty else {
+            _output.send(.signUpError)
+            return false
+        }
+        
+        // Validate that name contains at least two parts
+        let nameComponents = name.trimmingCharacters(in: .whitespaces).components(separatedBy: " ")
+        guard nameComponents.count >= 2 else {
+            alertTitle = "Invalid Name"
+            alertMessage = "Please enter both first name and last name separated by space"
+            showAlert = true
             _output.send(.signUpError)
             return false
         }
@@ -187,5 +189,25 @@ final class DefaultSignUpViewModel: SignUpViewModel, ObservableObject {
         }
         
         return true
+    }
+    
+    func showPassword() {
+        passwordIsHidden = false
+    }
+    
+    func hidePassword() {
+        passwordIsHidden = true
+    }
+    
+    func showConfirmPassword() {
+        confirmPasswordHidden = false
+    }
+    
+    func hideConfirmPassword() {
+        confirmPasswordHidden = true
+    }
+    
+    func goToLogin() {
+        authenticationCoordinator.goBack(animated: true)
     }
 }

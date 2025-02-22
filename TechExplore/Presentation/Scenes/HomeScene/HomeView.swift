@@ -22,10 +22,12 @@ struct Home: View {
     @FocusState private var isSearching: Bool
     @Namespace private var animation
     
+    let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    
     var body: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 15) {
-                statementsList()
+                statementsGrid()
             }
             .safeAreaPadding(15)
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -144,18 +146,16 @@ struct Home: View {
     }
     
     @ViewBuilder
-    private func statementsList() -> some View {
+    private func statementsGrid() -> some View {
         if viewModel.filteredStatements.isEmpty {
             Text("No statements found")
                 .font(.headline)
                 .foregroundColor(.gray)
                 .padding()
         } else {
-            ForEach(viewModel.filteredStatements) { statement in
-                Button {
-                    viewModel.goToDetails(statement: statement)
-                } label: {
-                    HStack(spacing: 12) {
+            LazyVGrid(columns: columns, spacing: 15) {
+                ForEach(viewModel.filteredStatements) { statement in
+                    VStack(spacing: 10) {
                         if let url = URL(string: statement.imageURL) {
                             AsyncImage(url: url) { image in
                                 image
@@ -165,28 +165,39 @@ struct Home: View {
                                 Circle()
                                     .fill(.gray.opacity(0.2))
                             }
-                            .frame(width: 55, height: 55)
+                            .frame(width: 80, height: 80)
                             .clipShape(Circle())
                         } else {
                             Circle()
                                 .fill(.gray.opacity(0.2))
-                                .frame(width: 55, height: 55)
+                                .frame(width: 80, height: 80)
                         }
                         
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(spacing: 6) {
                             Text("Statement #\(statement.id)")
                                 .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                            
                             Text(statement.content)
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
                                 .lineLimit(2)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: 40)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture {
+                        viewModel.goToDetails(statement: statement)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, minHeight: 160)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
+                    .shadow(color: .gray.opacity(0.2), radius: 5, x: 0, y: 2)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 15)
             }
+            .padding(.horizontal, 15)
         }
     }
 }
@@ -202,6 +213,7 @@ struct CustomScrollTargetBehaviour: ScrollTargetBehavior {
         }
     }
 }
+
 
 #Preview {
     HomeView()

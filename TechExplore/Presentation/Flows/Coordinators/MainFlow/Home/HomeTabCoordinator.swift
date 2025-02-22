@@ -29,7 +29,7 @@ final class DefaultHomeTabCoordinator: NSObject, HomeTabCoordinator {
     }
     
     func goToProductsDetails(productId: Int) {
-        let viewController = UIHostingController(rootView: StatementDetailsView())
+        let viewController = UIHostingController(rootView: StatementDetailsView(id: productId))
         rootViewController.pushViewController(viewController, animated: true)
     }
     

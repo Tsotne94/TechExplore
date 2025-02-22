@@ -32,12 +32,13 @@ final class HomeViewModel: ObservableObject {
     func fetchStatements() {
         getStatementsUseCase.execute(category: selectedCategory, query: searchText.isEmpty ? nil : searchText)
             .receive(on: DispatchQueue.main)
-            .sink { completion in
+            .sink { [weak self] completion in
                 switch completion {
                 case .finished:
                     break
                 case .failure(let error):
                     print("Error fetching statements: \(error)")
+                    self?.appflowcoordinator.viewModel.startAuthentication()
                 }
             } receiveValue: { [weak self] statements in
                 self?.statements = statements
@@ -49,12 +50,13 @@ final class HomeViewModel: ObservableObject {
     private func fetchCategories() {
         getCategoriesUseCase.execute()
             .receive(on: DispatchQueue.main)
-            .sink { completion in
+            .sink { [weak self] completion in
                 switch completion {
                 case .finished:
                     break
                 case .failure(let error):
                     print("Failed to fetch categories:", error)
+                    self?.appflowcoordinator.viewModel.startAuthentication()
                 }
             } receiveValue: { [weak self] categories in
                 self?.categories = categories
