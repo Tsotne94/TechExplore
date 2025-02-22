@@ -38,6 +38,7 @@ struct ProfileView: View {
                     .padding(.bottom, 40)
                 }
             }
+            .padding(.bottom, UIScreen.main.bounds.height > 667 ? 60 : 10)
         }
         .ignoresSafeArea(edges: .all)
         .sheet(isPresented: $showImagePicker) {

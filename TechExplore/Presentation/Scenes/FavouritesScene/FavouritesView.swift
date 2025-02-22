@@ -36,7 +36,6 @@ struct FavoritesView: View {
                 }
             }
             .onAppear {
-                // Simulate loading delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     withAnimation(.spring) {
                         isLoading = false
