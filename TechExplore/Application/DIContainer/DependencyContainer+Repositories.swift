@@ -11,6 +11,7 @@ public extension DependencyContainer {
             Module { DefaultAppStateRepository() as AppStateRepository }
             Module { DefaultAuthenticationRepository() as AuthenticationRepository }
             Module { DefaultKeyChainRepository() as KeyChainRepository }
+            Module { DefaultStatementRepository() as StatementsRepository }
         }
     }
 }

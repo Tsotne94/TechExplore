@@ -8,6 +8,5 @@
 import Foundation
 
 struct RefreshResponse: Codable {
-    let refresh: String
     let access: String
 }

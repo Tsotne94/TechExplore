@@ -57,6 +57,10 @@ public struct DefaultAuthenticationRepository: AuthenticationRepository {
         }
         .eraseToAnyPublisher()
     }
+    
+    public func getCurrentUser() -> AnyPublisher<User, Error> {
+        Empty<User, Error>().eraseToAnyPublisher()
+    }
 }
 
 //

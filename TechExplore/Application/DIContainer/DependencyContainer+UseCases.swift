@@ -17,6 +17,9 @@ public extension DependencyContainer {
             Module { DefaultKeyChainRetriveDataUseCase() as KeyChainRetriveDataUseCase }
             Module { DefaultKeyChainSaveDataUseCase() as KeyChainSaveDataUseCase }
             Module { DefaultKeyChainUpdateDataUseCase() as KeyChainUpdateDataUseCase }
+            Module { DefaultGetCurrentUserUseCase() as GetCurrentUserUseCase }
+            Module { DefaultFetchSpecificStatementUseCase() as FetchSpecificStatementUseCase }
+            Module { DefaultFetchStatementsUseCase() as FetchStatementsUseCase }
         }
     }
 }

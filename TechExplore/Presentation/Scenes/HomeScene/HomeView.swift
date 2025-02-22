@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct HomeView: View {
     var body: some View {
@@ -24,7 +25,7 @@ struct Home: View {
     var body: some View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 15) {
-                messagesList()
+                statementsList()
             }
             .safeAreaPadding(15)
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -41,7 +42,7 @@ struct Home: View {
     }
     
     @ViewBuilder
-    private func navigationBar(_ title: String = "Home Page") -> some View {
+    private func navigationBar(_ title: String = "Statements") -> some View {
         GeometryReader { proxy in
             let minY = proxy.frame(in: .scrollView(axis: .vertical)).minY
             let progress = viewModel.isSearching ? 1 : max(min((-minY / 70), 1), 0)
@@ -49,7 +50,7 @@ struct Home: View {
             VStack(spacing: 10) {
                 titleView(title)
                 searchBar(progress)
-                tagsScrollView()
+                categoriesScrollView()
             }
             .padding(.top, 25)
             .safeAreaPadding(.horizontal, 15)
@@ -76,7 +77,7 @@ struct Home: View {
             Image(systemName: "magnifyingglass")
                 .font(.title3)
             
-            TextField("Search Program", text: $viewModel.searchText)
+            TextField("Search Statements", text: $viewModel.searchText)
                 .focused($isSearching)
             
             if viewModel.isSearching {
@@ -105,22 +106,26 @@ struct Home: View {
     }
     
     @ViewBuilder
-    private func tagsScrollView() -> some View {
-        ScrollView(.horizontal) {
+    private func categoriesScrollView() -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(Tag.allCases, id: \.rawValue) { tag in
+                ForEach(viewModel.categories, id: \.id) { category in
                     Button {
                         withAnimation(.snappy) {
-                            viewModel.updateActiveTag(tag)
+                            if category.id == viewModel.selectedCategory?.id {
+                                viewModel.updateSelectedCategory(nil)
+                            } else {
+                                viewModel.updateSelectedCategory(category)
+                            }
                         }
                     } label: {
-                        Text(tag.rawValue)
+                        Text(category.title)
                             .font(.callout)
-                            .foregroundStyle(viewModel.activeTag == tag ? Color.white : Color.black)
+                            .foregroundStyle(viewModel.selectedCategory?.id == category.id ? Color.white : Color.black)
                             .padding(.vertical, 8)
                             .padding(.horizontal, 15)
                             .background {
-                                if viewModel.activeTag == tag {
+                                if viewModel.selectedCategory?.id == category.id {
                                     Capsule()
                                         .fill(.customGreen)
                                         .matchedGeometryEffect(id: "ACTIVETAB", in: animation)
@@ -133,34 +138,55 @@ struct Home: View {
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 15)
         }
         .frame(height: 50)
     }
     
     @ViewBuilder
-    private func messagesList() -> some View {
-        ForEach(viewModel.messages) { message in
-            Button {
-                viewModel.goToDetails(message: message)
-            } label: {
-                HStack(spacing: 12) {
-                    Circle()
-                        .frame(width: 55, height: 55)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(message.title)
-                            .font(.headline)
-                        Text(message.content)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        Text(message.timestamp, style: .date)
-                            .font(.caption)
-                            .foregroundColor(.gray)
+    private func statementsList() -> some View {
+        if viewModel.filteredStatements.isEmpty {
+            Text("No statements found")
+                .font(.headline)
+                .foregroundColor(.gray)
+                .padding()
+        } else {
+            ForEach(viewModel.filteredStatements) { statement in
+                Button {
+                    viewModel.goToDetails(statement: statement)
+                } label: {
+                    HStack(spacing: 12) {
+                        if let url = URL(string: statement.imageURL) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Circle()
+                                    .fill(.gray.opacity(0.2))
+                            }
+                            .frame(width: 55, height: 55)
+                            .clipShape(Circle())
+                        } else {
+                            Circle()
+                                .fill(.gray.opacity(0.2))
+                                .frame(width: 55, height: 55)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Statement #\(statement.id)")
+                                .font(.headline)
+                            Text(statement.content)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .lineLimit(2)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 15)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 15)
         }
     }
 }
