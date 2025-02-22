@@ -10,6 +10,8 @@ import SwiftUI
 struct StatementDetailsView: View {
     @StateObject private var viewModel: StatementDetailsViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var hasApplied: Bool = false
+    @State private var showingConfirmation: Bool = false
     
     init(id: Int) {
         _viewModel = StateObject(wrappedValue: StatementDetailsViewModel(id: id))
@@ -41,6 +43,11 @@ struct StatementDetailsView: View {
         }
         .navigationBarHidden(true)
         .background(Color(.systemBackground))
+        .alert("Application Received", isPresented: $showingConfirmation) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Thank you for your application! We will review it shortly.")
+        }
     }
     
     private func contentView(statement: Statement) -> some View {
@@ -196,22 +203,26 @@ struct StatementDetailsView: View {
     
     private var floatingApplyButton: some View {
         Button {
-            // Apply action
+            hasApplied = true
+            showingConfirmation = true
         } label: {
             HStack(spacing: 8) {
-                Text("Apply Now")
+                Text(hasApplied ? "Applied" : "Apply Now")
                     .font(.system(size: 16, weight: .semibold))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                if !hasApplied {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
             }
             .foregroundColor(.white)
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
-            .background(Color.green)
+            .background(hasApplied ? Color.gray : Color.green)
             .clipShape(Capsule())
             .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
+        .disabled(hasApplied)
     }
 }
