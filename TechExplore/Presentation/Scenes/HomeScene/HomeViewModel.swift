@@ -12,6 +12,7 @@ final class HomeViewModel: ObservableObject {
     @Inject private var homeTabCoordinator: HomeTabCoordinator
     @Inject private var appflowcoordinator: AppFlowCoordinator
     @Inject private var getStatementsUseCase: FetchStatementsUseCase
+    @Inject private var getCategoriesUseCase: FetchStatementCategories
     
     @Published var statements: [Statement] = []
     @Published var filteredStatements: [Statement] = []
@@ -46,12 +47,19 @@ final class HomeViewModel: ObservableObject {
     }
     
     private func fetchCategories() {
-        // Implement category fetching here
-        categories = [
-            Category(id: 1, title: "General", description: "General posts"),
-            Category(id: 2, title: "Tech", description: "Technology related"),
-            Category(id: 3, title: "Health", description: "Health and wellness")
-        ]
+        getCategoriesUseCase.execute()
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                switch completion {
+                case .finished:
+                    break
+                case .failure(let error):
+                    print("Failed to fetch categories:", error)
+                }
+            } receiveValue: { [weak self] categories in
+                self?.categories = categories
+            }
+            .store(in: &cancellables) 
     }
     
     private func filterStatements() {

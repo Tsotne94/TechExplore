@@ -33,6 +33,14 @@ public struct DefaultStatementRepository: StatementsRepository {
         )
     }
     
+    public func getCategories() -> AnyPublisher<[Category], any Error> {
+        getTokenAndExecuteRequest(
+            urlString: APIEndpointsEnum.categories,
+            modelType: [Category].self,
+            methodType: .get
+        )
+    }
+    
     private func getTokenAndExecuteRequest<T: Codable & Sendable>(
         urlString: String,
         modelType: T.Type,

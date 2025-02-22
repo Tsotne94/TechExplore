@@ -26,7 +26,7 @@ struct CompanyDetailsView: View {
             
                 LazyVGrid(columns: Array(repeating: griditems, count: 3)) {
                     ForEach(1...5, id: \.self) { num in
-                        StatementCellView()
+                        FavoriteCard(statement: MockStatement(id: 1, title: "cool cool", description: "safsf", category: "sdsdsd", date: Date()))
                             .frame(maxHeight: 100)
                     }
                 }.padding()

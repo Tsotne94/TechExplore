@@ -20,6 +20,8 @@ public extension DependencyContainer {
             Module { DefaultGetCurrentUserUseCase() as GetCurrentUserUseCase }
             Module { DefaultFetchSpecificStatementUseCase() as FetchSpecificStatementUseCase }
             Module { DefaultFetchStatementsUseCase() as FetchStatementsUseCase }
+            Module { DefaultGetCurrentUserUseCase() as GetCurrentUserUseCase }
+            Module { DefaultFetchStatementCategories() as FetchStatementCategories }
         }
     }
 }
