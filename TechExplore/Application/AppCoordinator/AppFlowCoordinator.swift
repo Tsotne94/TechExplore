@@ -12,7 +12,6 @@ import Combine
 protocol AppFlowCoordinator: Coordinator {
     var viewModel: AppFlowViewModel { get }
     func start()
-    func startOnboarding()
     func startAuthentication()
     func startMainFlow()
     func signOut()
@@ -26,7 +25,6 @@ final class DefaultAppFlowCoordinator: AppFlowCoordinator {
     
     @Inject var viewModel: AppFlowViewModel
     
-    @Inject private var onboardingCoordinator: OnboardingCoordinator
     @Inject private var authenticationCoordinator: AuthenticationCoordinator
     @Inject private var mainCoordinator: MainCoordinator
 
@@ -38,8 +36,6 @@ final class DefaultAppFlowCoordinator: AppFlowCoordinator {
         viewModel.output
             .sink { [weak self] action in
                 switch action {
-                case .startOnboarding:
-                    self?.startOnboarding()
                 case .startAuthentication:
                     self?.startAuthentication()
                 case .startMainFlow:
@@ -49,14 +45,6 @@ final class DefaultAppFlowCoordinator: AppFlowCoordinator {
             .store(in: &subscriptions)
         
         viewModel.loadAppState()
-    }
-    
-    func startOnboarding() {
-        onboardingCoordinator.start()
-        self.childCoordinators = [onboardingCoordinator]
-        self.window.rootViewController = onboardingCoordinator.rootViewController
-        
-        self.animatedTransition = true
     }
     
     func startAuthentication() {

@@ -7,6 +7,7 @@
 
 import Foundation
 import UIKit
+import SwiftUI
 
 protocol HomeTabCoordinator: Coordinator {
     var rootViewController: UINavigationController { get }
@@ -23,15 +24,13 @@ final class DefaultHomeTabCoordinator: NSObject, HomeTabCoordinator {
     }
     
     func start() {
-//        let viewController = HomeViewController()
-//        rootViewController.setViewControllers([viewController], animated: false)
+        let viewController = UIHostingController(rootView: HomeView())
+        rootViewController.setViewControllers([viewController], animated: false)
     }
     
     func goToProductsDetails(productId: Int) {
-//        let viewController = ProductDetailsViewController(id: productId) { [weak self] in
-//            self?.goBack()
-//        }
-//        rootViewController.pushViewController(viewController, animated: true)
+        let viewController = UIHostingController(rootView: StatementDetailsView(id: productId))
+        rootViewController.pushViewController(viewController, animated: true)
     }
     
     func goBack() {

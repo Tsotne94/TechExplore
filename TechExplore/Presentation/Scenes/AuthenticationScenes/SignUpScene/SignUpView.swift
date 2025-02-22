@@ -13,8 +13,10 @@ struct SignUpView: View {
     
     @State private var nameAnimation = AnimationState()
     @State private var emailAnimation = AnimationState()
+    @State private var phoneAnimation = AnimationState()
     @State private var passwordAnimation = AnimationState()
     @State private var confirmPasswordAnimation = AnimationState()
+    @State private var showDatePicker = false
     
     var body: some View {
         ScrollView {
@@ -61,6 +63,10 @@ struct SignUpView: View {
                 .padding(.horizontal, 5)
             emailField
                 .padding(.horizontal, 5)
+            phoneNumberField
+                .padding(.horizontal, 5)
+            dateOfBirthField
+                .padding(.horizontal, 5)
             passwordField
                 .padding(.horizontal, 5)
             confirmPasswordField
@@ -77,6 +83,9 @@ struct SignUpView: View {
                 animation: nameAnimation.offset
             )
             .focused($focusedField, equals: .name)
+            .onSubmit {
+                focusedField = nil
+            }
     }
     
     private var emailField: some View {
@@ -87,10 +96,76 @@ struct SignUpView: View {
                 text: "Email",
                 animation: emailAnimation.offset
             )
+            .onSubmit {
+                focusedField = nil
+            }
             .textContentType(.emailAddress)
             .keyboardType(.emailAddress)
             .autocapitalization(.none)
             .focused($focusedField, equals: .email)
+    }
+    
+    private var phoneNumberField: some View {
+        TextField("", text: $viewModel.phoneNumber)
+            .keyboardType(.phonePad)
+            .padding()
+            .textFieldStyle(
+                width: phoneAnimation.width,
+                text: "Phone Number",
+                animation: phoneAnimation.offset
+            )
+            .focused($focusedField, equals: .phoneNumber)
+            .onChange(of: viewModel.phoneNumber) { oldValue, newValue in
+                if newValue.count > 9 {
+                    viewModel.phoneNumber = String(newValue.prefix(9))
+                } else {
+                    viewModel.phoneNumber = newValue
+                }
+            }
+            .onSubmit {
+                focusedField = nil
+            }
+    }
+    
+    private var dateOfBirthField: some View {
+        VStack {
+            Button {
+                showDatePicker.toggle()
+            } label: {
+                HStack {
+                    Text(dateFormatter.string(from: viewModel.dateOfBirth))
+                        .foregroundColor(.black)
+                        .padding()
+                    Spacer()
+                    Image(systemName: "calendar")
+                        .foregroundColor(.black)
+                        .padding(.trailing)
+                }
+                .frame(height: 55)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(lineWidth: 2.5)
+                        .foregroundStyle(.green.opacity(0.8))
+                )
+            }
+            
+            if showDatePicker {
+                DatePicker(
+                    "",
+                    selection: $viewModel.dateOfBirth,
+                    in: ...Date(),
+                    displayedComponents: .date
+                )
+                .datePickerStyle(.graphical)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.white)
+                        .shadow(radius: 3)
+                )
+                .padding(.horizontal)
+            }
+        }
     }
     
     private var passwordField: some View {
@@ -111,6 +186,9 @@ struct SignUpView: View {
             )
             .textContentType(.newPassword)
             .focused($focusedField, equals: .password)
+            .onSubmit {
+                focusedField = nil
+            }
             
             togglePasswordVisibilityButton
         }
@@ -134,6 +212,9 @@ struct SignUpView: View {
             )
             .textContentType(.newPassword)
             .focused($focusedField, equals: .confirmPassword)
+            .onSubmit {
+                focusedField = nil
+            }
             
             toggleConfirmPasswordVisibilityButton
         }
@@ -180,11 +261,18 @@ struct SignUpView: View {
     private var alreadyHaveAccountButton: some View {
         Button {
             viewModel.goToLogin()
+            print("clickeeed")
         } label: {
             Text("Already Have An Account? **Log In**")
                 .foregroundColor(.black)
                 .font(.subheadline)
         }
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
     }
     
     private func updateAnimations() {
@@ -199,6 +287,12 @@ struct SignUpView: View {
                 for: .email,
                 isFocused: focusedField == .email,
                 isEmpty: viewModel.email.isEmpty
+            )
+            
+            phoneAnimation.animate(
+                for: .phoneNumber,
+                isFocused: focusedField == .phoneNumber,
+                isEmpty: viewModel.phoneNumber.isEmpty
             )
             
             passwordAnimation.animate(

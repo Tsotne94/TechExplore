@@ -6,7 +6,6 @@
 //
 
 public enum AppState: String {
-    case onboarding
     case authentication
     case mainFlow
 }

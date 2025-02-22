@@ -1,0 +1,23 @@
+{
+  "images" : [
+    {
+      "filename" : "Platform=Google, Color=Original.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "Platform=Google, Color=Original@2x.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "Platform=Google, Color=Original@3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

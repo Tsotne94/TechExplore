@@ -8,32 +8,44 @@
 import Combine
 import Foundation
 
-public struct DefaultAppStateRepository: AppStateRepository {
+public final class DefaultAppStateRepository: AppStateRepository {
+    @Inject private var keychainGetDataUseCase: KeyChainRetriveDataUseCase
+    @Inject private var keychainSaveDataUseCase: KeyChainSaveDataUseCase
     
     public init() { }
     
     public func loadAppState() -> AnyPublisher<AppState, Never> {
-        Future<AppState, Never> { promise in
-            if !UserDefaults.standard.bool(forKey: "hasSeenOnboarding") {
-                promise(.success(.onboarding))
-                return
+        return keychainGetDataUseCase.execute(key: "appState")
+            .map { data -> AppState in
+                if let stateString = String(data: data, encoding: .utf8),
+                   let state = AppState(rawValue: stateString) {
+                    return state
+                }
+                return .authentication
             }
-            
-            if let savedStateRaw = UserDefaults.standard.string(forKey: "appState"),
-               let savedState = AppState(rawValue: savedStateRaw) {
-                promise(.success(savedState))
-                return
-            }
-
-        }
-        .eraseToAnyPublisher()
+            .replaceError(with: .authentication)
+            .eraseToAnyPublisher()
     }
+    
+    
+    private var cancellables = Set<AnyCancellable>()
     
     public func saveAppState(_ state: AppState) {
-        UserDefaults.standard.set(state.rawValue, forKey: "appState")
-    }
-    
-    public func markHasSeenOnboarding() {
-        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        guard let data = state.rawValue.data(using: .utf8) else {
+            print("Failed to convert appState to Data")
+            return
+        }
+        
+        let _: AnyCancellable = keychainSaveDataUseCase.execute(key: "appState", data: data)
+            .sink { completion in
+                switch completion {
+                case .finished:
+                    print("saved")
+                case .failure(let error):
+                    print("failed to save app state: \(error.localizedDescription)")
+                }
+            } receiveValue: { _ in
+                print("saved")
+            }
     }
 }

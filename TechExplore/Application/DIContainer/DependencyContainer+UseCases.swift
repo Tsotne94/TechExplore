@@ -10,10 +10,18 @@ public extension DependencyContainer {
         DependencyContainer.root.register {
             Module { DefaultLoadAppStateUseCase() as LoadAppStateUseCase }
             Module { DefaultUpdateAppStateUseCase() as UpdateAppStateUseCase }
-            Module { DefaultHasSeenOnboardingUseCase() as HasSeenOnboardingUseCase }
             Module { DefaultSignInUseCase() as SignInUseCase }
             Module { DefaultSignUpUseCase() as SignUpUseCase }
             Module { DefaultSignOutUseCase() as SignOutUseCase }
+            Module { DefaultKeyChainDeleteDataUseCase() as KeyChainDeleteDataUseCase }
+            Module { DefaultKeyChainRetriveDataUseCase() as KeyChainRetriveDataUseCase }
+            Module { DefaultKeyChainSaveDataUseCase() as KeyChainSaveDataUseCase }
+            Module { DefaultKeyChainUpdateDataUseCase() as KeyChainUpdateDataUseCase }
+            Module { DefaultGetCurrentUserUseCase() as GetCurrentUserUseCase }
+            Module { DefaultFetchSpecificStatementUseCase() as FetchSpecificStatementUseCase }
+            Module { DefaultFetchStatementsUseCase() as FetchStatementsUseCase }
+            Module { DefaultGetCurrentUserUseCase() as GetCurrentUserUseCase }
+            Module { DefaultFetchStatementCategories() as FetchStatementCategories }
         }
     }
 }
