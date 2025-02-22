@@ -147,14 +147,14 @@ struct Home: View {
     
     @ViewBuilder
     private func statementsGrid() -> some View {
-        if viewModel.filteredStatements.isEmpty {
+        if viewModel.statements.isEmpty {
             Text("No statements found")
                 .font(.headline)
                 .foregroundColor(.gray)
                 .padding()
         } else {
             LazyVGrid(columns: columns, spacing: 15) {
-                ForEach(viewModel.filteredStatements) { statement in
+                ForEach(viewModel.statements) { statement in
                     VStack(spacing: 10) {
                         if let url = URL(string: statement.imageURL) {
                             AsyncImage(url: url) { image in
